@@ -3,6 +3,7 @@ import torch
 import torch.nn as nn
 from torchvision import models, transforms
 from PIL import Image
+
 from decision_support import get_decision_support
 
 
@@ -19,9 +20,142 @@ IMAGE_SIZE = 224
 # ============================================================
 
 st.set_page_config(
-    page_title="Crop Disease Detection",
+    page_title="Crop Disease Detection System",
     page_icon="🌿",
-    layout="centered"
+    layout="wide",
+    initial_sidebar_state="collapsed"
+)
+
+
+# ============================================================
+# CUSTOM CSS
+# ============================================================
+
+st.markdown(
+    """
+    <style>
+
+    /* ---------- PAGE ---------- */
+
+    .stApp {
+        background-color: #f6f9f6;
+    }
+
+    .block-container {
+        max-width: 1150px;
+        padding-top: 2rem;
+        padding-bottom: 3rem;
+    }
+
+
+    /* ---------- TITLE ---------- */
+
+    .main-title {
+        text-align: center;
+        color: #174d2a;
+        font-size: 42px;
+        font-weight: 800;
+        margin-bottom: 5px;
+    }
+
+    .subtitle {
+        text-align: center;
+        color: #64736a;
+        font-size: 17px;
+        margin-bottom: 25px;
+    }
+
+
+    /* ---------- SECTION HEADINGS ---------- */
+
+    h2, h3 {
+        color: #174d2a !important;
+    }
+
+
+    /* ---------- BUTTON ---------- */
+
+    .stButton > button {
+        width: 100%;
+        min-height: 52px;
+        border-radius: 14px;
+        font-size: 17px;
+        font-weight: 700;
+    }
+
+
+    /* ---------- FILE UPLOADER ---------- */
+
+    [data-testid="stFileUploader"] {
+        background-color: white;
+        border: 2px dashed #9dbca4;
+        border-radius: 18px;
+        padding: 18px;
+    }
+
+
+    /* ---------- METRICS ---------- */
+
+    [data-testid="stMetric"] {
+        background-color: white;
+        padding: 18px;
+        border-radius: 16px;
+        border: 1px solid #e1e9e2;
+        box-shadow: 0 3px 12px rgba(0,0,0,0.04);
+    }
+
+
+    /* ---------- IMAGE ---------- */
+
+    [data-testid="stImage"] {
+        border-radius: 18px;
+    }
+
+
+    /* ---------- EXPANDER ---------- */
+
+    [data-testid="stExpander"] {
+        border-radius: 15px;
+        border: 1px solid #dce6de;
+        background-color: white;
+    }
+
+
+    /* ---------- DIVIDER ---------- */
+
+    hr {
+        margin-top: 28px;
+        margin-bottom: 28px;
+    }
+
+
+    /* ---------- FOOTER ---------- */
+
+    .footer-text {
+        text-align: center;
+        color: #718078;
+        font-size: 13px;
+        padding-top: 20px;
+    }
+
+
+    /* ---------- MOBILE ---------- */
+
+    @media (max-width: 700px) {
+
+        .main-title {
+            font-size: 30px;
+        }
+
+        .subtitle {
+            font-size: 14px;
+        }
+
+    }
+
+    </style>
+    """,
+    unsafe_allow_html=True
 )
 
 
@@ -89,49 +223,88 @@ transform = transforms.Compose([
 # HEADER
 # ============================================================
 
-st.title("🌿 Crop Disease Detection System")
-
-st.write(
-    "AI-based crop disease classification with "
-    "preventive decision support."
+st.markdown(
+    '<div class="main-title">🌿 Crop Disease Detection System</div>',
+    unsafe_allow_html=True
 )
 
-st.divider()
+st.markdown(
+    '<div class="subtitle">'
+    'AI-based crop disease classification with preventive decision support'
+    '</div>',
+    unsafe_allow_html=True
+)
 
 
 # ============================================================
-# MODEL INFORMATION
+# PROJECT INTRODUCTION
 # ============================================================
 
-col1, col2 = st.columns(2)
+st.info(
+    "🌱 Upload a crop leaf image and let the AI model identify "
+    "the crop condition and provide preventive recommendations."
+)
+
+
+# ============================================================
+# SYSTEM INFORMATION
+# ============================================================
+
+st.subheader("📊 System Overview")
+
+col1, col2, col3, col4 = st.columns(4)
 
 with col1:
     st.metric(
-        "Disease Classes",
-        len(class_names)
+        "🌱 Disease Classes",
+        "29"
     )
 
 with col2:
     st.metric(
-        "Model",
+        "🧠 AI Model",
         "EfficientNet-B0"
+    )
+
+with col3:
+    st.metric(
+        "🎯 Test Accuracy",
+        "99.48%"
+    )
+
+with col4:
+    st.metric(
+        "🛡️ Decision Support",
+        "Enabled"
     )
 
 
 # ============================================================
-# IMAGE UPLOAD
+# ANALYSIS SECTION
 # ============================================================
 
-st.subheader("Upload Leaf Image")
+st.divider()
+
+st.subheader("🔍 Analyze Your Crop")
+
+st.write(
+    "Upload a clear image of a crop leaf. "
+    "For better results, make sure the leaf is clearly visible."
+)
+
+
+# ============================================================
+# UPLOAD
+# ============================================================
 
 uploaded_file = st.file_uploader(
-    "Choose a leaf image",
+    "📸 Choose a Leaf Image",
     type=["jpg", "jpeg", "png"]
 )
 
 
 # ============================================================
-# PREDICTION
+# IMAGE PREVIEW
 # ============================================================
 
 if uploaded_file is not None:
@@ -140,106 +313,351 @@ if uploaded_file is not None:
         uploaded_file
     ).convert("RGB")
 
-    st.image(
-        image,
-        caption="Uploaded Leaf Image",
-        use_container_width=True
+    st.success(
+        "✅ Image uploaded successfully!"
     )
 
-    if st.button(
-        "🔍 Detect Disease",
-        use_container_width=True
-    ):
+    preview_col, analysis_col = st.columns(
+        [1.2, 1],
+        gap="large"
+    )
 
-        with st.spinner(
-            "Analyzing leaf image..."
-        ):
+    # --------------------------------------------------------
+    # PREVIEW
+    # --------------------------------------------------------
 
-            image_tensor = transform(
-                image
-            ).unsqueeze(0).to(device)
+    with preview_col:
 
-            with torch.no_grad():
+        st.subheader("📷 Image Preview")
 
-                outputs = model(
-                    image_tensor
+        st.image(
+            image,
+            caption="Uploaded Leaf Image",
+            use_container_width=True
+        )
+
+
+    # --------------------------------------------------------
+    # ANALYSIS
+    # --------------------------------------------------------
+
+    with analysis_col:
+
+        st.subheader("🤖 AI Analysis")
+
+        st.write(
+            "The EfficientNet-B0 model will analyze the "
+            "visual features of the uploaded leaf."
+        )
+
+        st.write("")
+
+        analyze = st.button(
+            "🔍 ANALYZE LEAF IMAGE",
+            type="primary",
+            use_container_width=True
+        )
+
+        if analyze:
+
+            with st.spinner(
+                "🧠 AI is analyzing the leaf..."
+            ):
+
+                image_tensor = transform(
+                    image
+                ).unsqueeze(0).to(device)
+
+                with torch.no_grad():
+
+                    outputs = model(
+                        image_tensor
+                    )
+
+                    probabilities = torch.softmax(
+                        outputs,
+                        dim=1
+                    )
+
+                    confidence, predicted_index = torch.max(
+                        probabilities,
+                        1
+                    )
+
+                predicted_index = predicted_index.item()
+
+                confidence = (
+                    confidence.item() * 100
                 )
 
-                probabilities = torch.softmax(
-                    outputs,
+                predicted_class = class_names[
+                    predicted_index
+                ]
+
+                # Top 3 predictions
+                top_probabilities, top_indices = torch.topk(
+                    probabilities,
+                    min(3, len(class_names)),
                     dim=1
                 )
 
-                confidence, predicted_index = torch.max(
-                    probabilities,
-                    1
+                top_probabilities = (
+                    top_probabilities[0]
+                    .cpu()
+                    .tolist()
                 )
 
-            predicted_index = (
-                predicted_index.item()
-            )
+                top_indices = (
+                    top_indices[0]
+                    .cpu()
+                    .tolist()
+                )
 
-            confidence = (
-                confidence.item() * 100
-            )
+            st.session_state["prediction"] = {
+                "predicted_class": predicted_class,
+                "confidence": confidence,
+                "top_probabilities": top_probabilities,
+                "top_indices": top_indices
+            }
 
-            predicted_class = class_names[
-                predicted_index
-            ]
 
-        # ----------------------------------------------------
-        # RESULT
-        # ----------------------------------------------------
+# ============================================================
+# RESULTS
+# ============================================================
 
-        st.divider()
+if "prediction" in st.session_state:
 
-        st.subheader(
-            "Prediction Result"
+    prediction = st.session_state["prediction"]
+
+    predicted_class = prediction["predicted_class"]
+    confidence = prediction["confidence"]
+    top_probabilities = prediction["top_probabilities"]
+    top_indices = prediction["top_indices"]
+
+
+    # ========================================================
+    # DECISION SUPPORT
+    # ========================================================
+
+    result = get_decision_support(
+        predicted_class
+    )
+
+
+    # ========================================================
+    # RESULT HEADER
+    # ========================================================
+
+    st.divider()
+
+    st.subheader("🎯 AI Analysis Result")
+
+    clean_class = (
+        predicted_class
+        .replace("___", " • ")
+        .replace("_", " ")
+    )
+
+    st.success(
+        f"🌿 Prediction: {clean_class}"
+    )
+
+
+    # ========================================================
+    # CONFIDENCE
+    # ========================================================
+
+    confidence_col1, confidence_col2 = st.columns(
+        [1, 2]
+    )
+
+    with confidence_col1:
+
+        st.metric(
+            "🎯 Confidence",
+            f"{confidence:.2f}%"
         )
 
-        st.success(
-            f"Predicted Class: {predicted_class}"
+    with confidence_col2:
+
+        st.write("**Model Confidence**")
+
+        st.progress(
+            min(confidence / 100, 1.0)
         )
+
+        if confidence >= 90:
+
+            st.success(
+                "High-confidence prediction"
+            )
+
+        elif confidence >= 70:
+
+            st.warning(
+                "Moderate-confidence prediction"
+            )
+
+        else:
+
+            st.warning(
+                "Low-confidence prediction — "
+                "consider checking another image."
+            )
+
+
+    # ========================================================
+    # CROP / CONDITION / STATUS
+    # ========================================================
+
+    st.write("")
+
+    detail1, detail2, detail3 = st.columns(3)
+
+    with detail1:
+
+        st.metric(
+            "🌱 Crop",
+            result["crop"]
+        )
+
+    with detail2:
+
+        st.metric(
+            "🔬 Condition",
+            result["disease"]
+        )
+
+    with detail3:
+
+        st.metric(
+            "🛡️ Status",
+            result["status"]
+        )
+
+
+    # ========================================================
+    # PREVENTIVE DECISION SUPPORT
+    # ========================================================
+
+    st.divider()
+
+    st.subheader(
+        "🛡️ Preventive Decision Support"
+    )
+
+    st.write(
+        "Recommended actions based on the detected crop condition:"
+    )
+
+    for number, recommendation in enumerate(
+        result["prevention"],
+        start=1
+    ):
 
         st.info(
-            f"Confidence: {confidence:.2f}%"
+            f"**{number}.** {recommendation}"
         )
 
-        # ----------------------------------------------------
-        # DECISION SUPPORT
-        # ----------------------------------------------------
 
-        result = get_decision_support(
-            predicted_class
-        )
+    # ========================================================
+    # TOP 3 PREDICTIONS
+    # ========================================================
 
-        st.divider()
+    st.divider()
 
-        st.subheader(
-            "Preventive Decision Support"
-        )
+    with st.expander(
+        "📊 View Top 3 AI Predictions"
+    ):
 
-        st.write(
-            f"**Status:** {result['status']}"
-        )
+        for rank, (index, probability) in enumerate(
+            zip(
+                top_indices,
+                top_probabilities
+            ),
+            start=1
+        ):
 
-        st.write(
-            f"**Crop:** {result['crop']}"
-        )
-
-        st.write(
-            f"**Disease:** {result['disease']}"
-        )
-
-        st.write(
-            "**Recommended Actions:**"
-        )
-
-        for recommendation in result["prevention"]:
+            class_name = (
+                class_names[index]
+                .replace("___", " • ")
+                .replace("_", " ")
+            )
 
             st.write(
-                f"• {recommendation}"
+                f"**{rank}. {class_name}**"
             )
+
+            st.progress(
+                min(float(probability), 1.0)
+            )
+
+            st.caption(
+                f"{probability * 100:.2f}% confidence"
+            )
+
+
+# ============================================================
+# HOW THE SYSTEM WORKS
+# ============================================================
+
+st.divider()
+
+st.subheader(
+    "⚙️ How the System Works"
+)
+
+st.write(
+    "The complete prediction pipeline:"
+)
+
+step1, step2, step3, step4 = st.columns(4)
+
+with step1:
+
+    st.info(
+        "📸 **1. Upload**\n\n"
+        "Select a clear crop leaf image."
+    )
+
+with step2:
+
+    st.info(
+        "🧠 **2. Analyze**\n\n"
+        "EfficientNet-B0 processes the image."
+    )
+
+with step3:
+
+    st.info(
+        "🔬 **3. Classify**\n\n"
+        "The system identifies the crop condition."
+    )
+
+with step4:
+
+    st.info(
+        "🛡️ **4. Protect**\n\n"
+        "Preventive recommendations are provided."
+    )
+
+
+# ============================================================
+# FUTURE ENHANCEMENT
+# ============================================================
+
+st.divider()
+
+st.subheader(
+    "🤖 Future Enhancement"
+)
+
+st.info(
+    "A multilingual agricultural AI assistant with Telugu "
+    "language and voice support can be added in a future version "
+    "to explain diseases and preventive measures in a "
+    "farmer-friendly way."
+)
 
 
 # ============================================================
@@ -248,7 +666,12 @@ if uploaded_file is not None:
 
 st.divider()
 
-st.caption(
-    "Crop Disease Detection System | "
-    "EfficientNet-B0 | 29 Classes"
+st.markdown(
+    '<div class="footer-text">'
+    '🌿 <b>Crop Disease Detection System</b><br>'
+    'AI-Based Crop Disease Classification with Preventive Decision Support'
+    '<br><br>'
+    'EfficientNet-B0 • 29 Classes • Intelligent Image Analysis'
+    '</div>',
+    unsafe_allow_html=True
 )
